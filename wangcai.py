@@ -15,6 +15,9 @@ IN4 = 26
 ENA = 16
 ENB = 13
 
+#舵机引脚定义
+ServoPin = 23
+
 class Wangcai:
     name="wangcai"
 
@@ -25,9 +28,13 @@ class Wangcai:
         #忽略警告信息
         GPIO.setwarnings(False)
 
+    def uninit(self):
+        GPIO.cleanup()
+        return
+
+
     def color(self, r=0, g=0, b=0, duration=1):
         #RGB三色灯设置为输出模式
-        GPIO.setmode(GPIO.BCM)
         GPIO.setup(LED_R, GPIO.OUT)
         GPIO.setup(LED_G, GPIO.OUT)
         GPIO.setup(LED_B, GPIO.OUT)
@@ -44,8 +51,6 @@ class Wangcai:
             GPIO.output(LED_G, GPIO.LOW)
             GPIO.output(LED_B, GPIO.LOW)
             break
-
-        GPIO.cleanup()
 
     def colorLed(self, loop=1):
         count = 0
@@ -76,15 +81,9 @@ class Wangcai:
                 count = count+1
         except:
             print "except"
-        #使用try except语句，当CTRL+C结束进程时会触发异常后
-        #会执行gpio.cleanup()语句清除GPIO管脚的状态
-        GPIO.cleanup()
 
     #电机引脚初始化操作
     def motor_init(self):
-        global pwm_ENA
-        global pwm_ENB
-        global delaytime
         GPIO.setup(ENA,GPIO.OUT,initial=GPIO.HIGH)
         GPIO.setup(IN1,GPIO.OUT,initial=GPIO.LOW)
         GPIO.setup(IN2,GPIO.OUT,initial=GPIO.LOW)
@@ -92,10 +91,24 @@ class Wangcai:
         GPIO.setup(IN3,GPIO.OUT,initial=GPIO.LOW)
         GPIO.setup(IN4,GPIO.OUT,initial=GPIO.LOW)
         #设置pwm引脚和频率为2000hz
-        pwm_ENA = GPIO.PWM(ENA, 2000)
-        pwm_ENB = GPIO.PWM(ENB, 2000)
-        pwm_ENA.start(0)
-        pwm_ENB.start(0)
+        self.pwm_ENA = GPIO.PWM(ENA, 2000)
+        self.pwm_ENB = GPIO.PWM(ENB, 2000)
+        self.pwm_ENA.start(0)
+        self.pwm_ENB.start(0)
+
+        #舵机引脚设置为输出模式
+        GPIO.setup(ServoPin, GPIO.OUT)
+        #设置pwm引脚和频率为50hz
+        self.pwm_servo = GPIO.PWM(ServoPin, 50)
+        self.pwm_servo.start(0)
+
+    def motor_uninit(self):
+        #设置pwm引脚和频率为2000hz
+        self.pwm_ENA = GPIO.PWM(ENA, 2000)
+        self.pwm_ENB = GPIO.PWM(ENB, 2000)
+        self.pwm_ENA.stop()
+        self.pwm_ENB.stop()
+        self.pwm_servo.stop()
 
     #小车前进	
     def run(self,delaytime):
@@ -167,6 +180,52 @@ class Wangcai:
         pwm_ENB.ChangeDutyCycle(80)
         time.sleep(delaytime)
 
+    #根据转动的角度来点亮相应的颜色
+    def corlor_light(self,pos):
+        if pos > 150:
+            GPIO.output(LED_R, GPIO.HIGH)
+            GPIO.output(LED_G, GPIO.LOW)
+            GPIO.output(LED_B, GPIO.LOW)
+        elif pos > 125:
+            GPIO.output(LED_R, GPIO.LOW)
+            GPIO.output(LED_G, GPIO.HIGH)
+            GPIO.output(LED_B, GPIO.LOW)
+        elif pos >100:
+            GPIO.output(LED_R, GPIO.LOW)
+            GPIO.output(LED_G, GPIO.LOW)
+            GPIO.output(LED_B, GPIO.HIGH)
+        elif pos > 75:
+            GPIO.output(LED_R, GPIO.HIGH)
+            GPIO.output(LED_G, GPIO.HIGH)
+            GPIO.output(LED_B, GPIO.LOW)
+        elif pos > 50:
+            GPIO.output(LED_R, GPIO.LOW)
+            GPIO.output(LED_G, GPIO.HIGH)
+            GPIO.output(LED_B, GPIO.HIGH)
+        elif pos > 25:
+            GPIO.output(LED_R, GPIO.HIGH)
+            GPIO.output(LED_G, GPIO.LOW)
+            GPIO.output(LED_B, GPIO.HIGH)
+        elif pos > 0:
+            GPIO.output(LED_R, GPIO.HIGH)
+            GPIO.output(LED_G, GPIO.HIGH)
+            GPIO.output(LED_B, GPIO.HIGH)
+        else :
+            GPIO.output(LED_R, GPIO.LOW)
+            GPIO.output(LED_G, GPIO.LOW)
+            GPIO.output(LED_B, GPIO.LOW)
+            
+    #舵机来回转动
+    def servo_control_color(self):
+        for pos in range(181):
+            self.pwm_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
+        self.corlor_light(pos)
+        time.sleep(0.009) 
+        for pos in reversed(range(181)):
+            self.pwm_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
+        self.corlor_light(pos)
+        time.sleep(0.009)
+
 if __name__ == "__main__":
 
     print('''
@@ -178,11 +237,19 @@ if __name__ == "__main__":
     wc = Wangcai("wangwang")
     print("my name is %s" % wc.name)
 
-    wc.colorLed(1)
-
-    time.sleep(2)
 
     wc.color(1,0,0,2)
+
+    #try/except语句用来检测try语句块中的错误，
+    #从而让except语句捕获异常信息并处理。
+    try:
+        wc.motor_init()
+        while True:
+            wc.servo_control_color()
+            
+    except KeyboardInterrupt:
+        pass
+
     '''
     #延时2s   
     time.sleep(2)
@@ -199,6 +266,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     '''
-    pwm_ENA.stop()
-    pwm_ENB.stop()
-    GPIO.cleanup()
+
