@@ -17,6 +17,8 @@ ENB = 13
 
 #舵机引脚定义
 ServoPin = 23
+ServoUpDownPin = 9
+ServoLeftRightPin = 11
 
 class Wangcai:
     name="wangcai"
@@ -51,12 +53,22 @@ class Wangcai:
         self.pwm_ENA.start(0)
         self.pwm_ENB.start(0)
 
+
+
         #舵机引脚设置为输出模式
         GPIO.setup(ServoPin, GPIO.OUT)
+        GPIO.setup(ServoUpDownPin, GPIO.OUT)
+        GPIO.setup(ServoLeftRightPin, GPIO.OUT)
 
         #设置pwm引脚和频率为50hz
-        self.pwm_servo = GPIO.PWM(ServoPin, 50)
-        self.pwm_servo.start(0)
+        self.pwm_front_servo = GPIO.PWM(ServoPin, 50)
+        self.pwm_front_servo.start(0)
+
+        self.pwm_updown_servo = GPIO.PWM(ServoUpDownPin, 50)
+        self.pwm_updown_servo.start(0)
+
+        self.pwm_leftright_servo = GPIO.PWM(ServoLeftRightPin, 50)
+        self.pwm_leftright_servo.start(0)
 
     #
     def motor_uninit(self):
@@ -65,7 +77,7 @@ class Wangcai:
         self.pwm_ENB = GPIO.PWM(ENB, 2000)
         self.pwm_ENA.stop()
         self.pwm_ENB.stop()
-        self.pwm_servo.stop()
+        self.pwm_front_servo.stop()
 
     #小车前进   
     def run(self,delaytime=1):
@@ -175,20 +187,37 @@ class Wangcai:
     #舵机来回转动
     def servo_control_color(self):
         for pos in range(181):
-            self.pwm_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
+            self.pwm_front_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
         self.corlor_light(pos)
         time.sleep(0.009) 
         for pos in reversed(range(181)):
-            self.pwm_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
+            self.pwm_front_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
         self.corlor_light(pos)
         time.sleep(0.009)
 
     #前舵机旋转到指定角度
     def frontservo_appointed_detection(self,pos): 
         for i in range(18):   
-            self.pwm_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
+            self.pwm_front_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
             time.sleep(0.02)                            #等待20ms周期结束
             #pwm_FrontServo.ChangeDutyCycle(0)  #归零信号
+
+
+    #摄像头舵机左右旋转到指定角度
+    def leftrightservo_appointed_detection(self,pos): 
+        for i in range(18):   
+            self.pwm_leftright_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
+            time.sleep(0.02)                            #等待20ms周期结束
+            #pwm_LeftRightServo.ChangeDutyCycle(0)  #归零信号
+
+    #摄像头舵机上下旋转到指定角度
+    def updownservo_appointed_detection(self,pos):  
+        for i in range(18):  
+            self.pwm_updown_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
+            time.sleep(0.02)                            #等待20ms周期结束
+            #pwm_UpDownServo.ChangeDutyCycle(0) #归零信号
+
+
 
     #
     def color(self, r=0, g=0, b=0, duration=1):
@@ -224,7 +253,10 @@ if __name__ == "__main__":
 
 
     wc.color(1,0,0,0.5)
-    wc.frontservo_appointed_detection(180)
+    #wc.frontservo_appointed_detection(180)
+    #wc.leftrightservo_appointed_detection(20)
+    wc.updownservo_appointed_detection(180)
+
     '''
     #try/except语句用来检测try语句块中的错误，
     #从而让except语句捕获异常信息并处理。
