@@ -275,6 +275,58 @@ class Wangcai:
         GPIO.output(buzzer, GPIO.HIGH)
         time.sleep(0.001)
 
+    #超声波测距函数
+    def distance(self):
+        GPIO.output(TrigPin,GPIO.HIGH)
+        time.sleep(0.000015)
+        GPIO.output(TrigPin,GPIO.LOW)
+        while not GPIO.input(EchoPin):
+            pass
+            t1 = time.time()
+        while GPIO.input(EchoPin):
+            pass
+            t2 = time.time()
+        #print "distance is %d " % (((t2 - t1)* 340 / 2) * 100)
+        time.sleep(0.01)
+        return ((t2 - t1)* 340 / 2) * 100
+
+    #巡线测试
+    def tracking_sensor(self):
+        #检测到黑线时循迹模块相应的指示灯亮，端口电平为LOW
+        #未检测到黑线时循迹模块相应的指示灯灭，端口电平为HIGH
+        TrackSensorLeftValue1  = GPIO.input(TrackSensorLeftPin1)
+        TrackSensorLeftValue2  = GPIO.input(TrackSensorLeftPin2)
+        TrackSensorRightValue1 = GPIO.input(TrackSensorRightPin1)
+        TrackSensorRightValue2 = GPIO.input(TrackSensorRightPin2)
+        infrared_track_value_list = ['0','0','0','0']
+        infrared_track_value_list[0] = str(1 ^TrackSensorLeftValue1)
+        infrared_track_value_list[1] = str(1 ^TrackSensorLeftValue2)
+        infrared_track_value_list[2] = str(1 ^TrackSensorRightValue1)
+        infrared_track_value_list[3] = str(1 ^TrackSensorRightValue2)
+        return ''.join(infrared_track_value_list)
+
+    #避障红外引脚测试
+    def infrared_avoid_sensor(self):
+        #遇到障碍物,红外避障模块的指示灯亮,端口电平为LOW
+        #未遇到障碍物,红外避障模块的指示灯灭,端口电平为HIGH
+        LeftSensorValue  = GPIO.input(AvoidSensorLeft)
+        RightSensorValue = GPIO.input(AvoidSensorRight)
+        infrared_avoid_value_list = ['0','0']
+        infrared_avoid_value_list[0] = str(1 ^LeftSensorValue)
+        infrared_avoid_value_list[1] = str(1 ^RightSensorValue)
+        return ''.join(infrared_avoid_value_list)
+            
+    #寻光引脚测试
+    def lighting_sensor(self):
+        #遇到光线,寻光模块的指示灯灭,端口电平为HIGH
+        #未遇光线,寻光模块的指示灯亮,端口电平为LOW
+        LdrSersorLeftValue  = GPIO.input(LdrSensorLeft)
+        LdrSersorRightValue = GPIO.input(LdrSensorRight)  
+        LDR_value_list = ['0','0']
+        LDR_value_list[0] = str(LdrSersorLeftValue)
+        LDR_value_list[1] = str(LdrSersorRightValue)    
+        return ''.join(LDR_value_list)
+
 # main function
 if __name__ == "__main__":
 
@@ -293,12 +345,16 @@ if __name__ == "__main__":
         print "front servo left, mid, right, mid (0-180)"
         time.sleep(0.5)
         wc.frontservo_appointed_detection(180)
+        print "left distance is " % wc.distance()
         time.sleep(0.5)
         wc.frontservo_appointed_detection(90)
+        print "front distance is " % wc.distance()
         time.sleep(0.5)
         wc.frontservo_appointed_detection(0)
+        print "right distance is " % wc.distance()
         time.sleep(0.5)
         wc.frontservo_appointed_detection(90)
+        print "front distance is " % wc.distance()
         time.sleep(0.5)
 
         # front led color: red, green, blue, mute
@@ -350,37 +406,38 @@ if __name__ == "__main__":
         time.sleep(1)
         wc.right()
         time.sleep(1)
+        wc.spin_left()
+        time.sleep(1)
+        wc.spin_right()
+        time.sleep(1)
         wc.brake()
+
+        # car whilstle
+        time.sleep(1)
+        wc.whistle()
+
+        # ultrasonic distance
+        i = 0
+        while i < 100 :
+            print "distance is %s" % wc.distance()
+            time.sleep(0.1)
+            i += 1
+
+        # 4 bit of tracking sensor
+        print "tracking %s" % wc.tracking_sensor()
+        # 2 bit
+        print "infrared %s" % wc.infrared_avoid_sensor()
+        # 2 bit
+        print "lighting %s" % wc.lighting_sensor()
+
+        # front fan control
+        GPIO.output(OutfirePin,GPIO.HIGH)
+        time.sleep(1)
+        GPIO.output(OutfirePin,GPIO.LOW)
+
     else :
         wc.color_led_pwm(255,0,0)
         time.sleep(1)
-        wc.whistle()
-        wc.whistle()
-    '''
-    #try/except语句用来检测try语句块中的错误，
-    #从而让except语句捕获异常信息并处理。
-    try:
-        wc.motor_init()
-        while True:
-            wc.servo_control_color()
-            
-    except KeyboardInterrupt:
-        pass
 
 
-    #延时2s   
-    time.sleep(2)
-
-
-    #try/except语句用来检测try语句块中的错误，
-    #从而让except语句捕获异常信息并处理。
-    #小车循环前进1s，后退1s，左转2s，右转2s，原地左转3s
-    #原地右转3s，停止1s。
-    try:
-        wc.motor_init()
-        wc.spin_left(1)
-        wc.brake(0)
-    except KeyboardInterrupt:
-        pass
-    '''
 
