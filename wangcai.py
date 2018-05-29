@@ -55,7 +55,7 @@ class Wangcai:
     ServoFrontPos = 90
     ServoLeftRightPos = 90
     ServoUpDownPos = 90
-
+    walkEnable = False
 
     # construction function
     def __init__(self, name):
@@ -114,6 +114,7 @@ class Wangcai:
 
     # deconstruction function
     def __del__(self):
+        #self.motor_uninit()
         return
 
     #电机引脚初始化操作
@@ -129,70 +130,90 @@ class Wangcai:
 
     #
     def motor_uninit(self):
-        return
+        print("motor_uninit")
+        self.brake()
+        self.frontservo_appointed_detection(90)
+        self.pwm_FrontServo.ChangeDutyCycle(0)   #归零信号
+        self.updownservo_appointed_detection(90)
+        self.pwm_UpDownServo.ChangeDutyCycle(0)  #归零信号
+        self.leftrightservo_appointed_detection(90)
+        self.pwm_LeftRightServo.ChangeDutyCycle(0)   #归零信号
+        self.color_led_pwm(0,0,0)
 
     #小车前进   
-    def advance(self,delaytime=1):
+    def advance(self,delaytime=1,lspeed=80,rspeed=80,brake=True):
         GPIO.output(IN1, GPIO.HIGH)
         GPIO.output(IN2, GPIO.LOW)
         GPIO.output(IN3, GPIO.HIGH)
         GPIO.output(IN4, GPIO.LOW)
-        self.pwm_ENA.ChangeDutyCycle(80)
-        self.pwm_ENB.ChangeDutyCycle(80)
+        self.pwm_ENA.ChangeDutyCycle(lspeed)
+        self.pwm_ENB.ChangeDutyCycle(rspeed)
         time.sleep(delaytime)
+        if(brake):
+            self.brake()
 
     #小车后退
-    def back(self,delaytime=1):
+    def back(self,delaytime=1,lspeed=80,rspeed=80,brake=True):
         GPIO.output(IN1, GPIO.LOW)
         GPIO.output(IN2, GPIO.HIGH)
         GPIO.output(IN3, GPIO.LOW)
         GPIO.output(IN4, GPIO.HIGH)
-        self.pwm_ENA.ChangeDutyCycle(80)
-        self.pwm_ENB.ChangeDutyCycle(80)
+        self.pwm_ENA.ChangeDutyCycle(lspeed)
+        self.pwm_ENB.ChangeDutyCycle(rspeed)
         time.sleep(delaytime)
+        if(brake):
+            self.brake()
 
     #小车左转   
-    def left(self,delaytime=1):
+    def left(self,delaytime=1,lspeed=80,rspeed=80,brake=True):
         GPIO.output(IN1, GPIO.LOW)
         GPIO.output(IN2, GPIO.LOW)
         GPIO.output(IN3, GPIO.HIGH)
         GPIO.output(IN4, GPIO.LOW)
-        self.pwm_ENA.ChangeDutyCycle(80)
-        self.pwm_ENB.ChangeDutyCycle(80)
+        self.pwm_ENA.ChangeDutyCycle(lspeed)
+        self.pwm_ENB.ChangeDutyCycle(rspeed)
         time.sleep(delaytime)
+        if(brake):
+            self.brake()
 
     #小车右转
-    def right(self,delaytime=1):
+    def right(self,delaytime=1,lspeed=80,rspeed=80,brake=True):
         GPIO.output(IN1, GPIO.HIGH)
         GPIO.output(IN2, GPIO.LOW)
         GPIO.output(IN3, GPIO.LOW)
         GPIO.output(IN4, GPIO.LOW)
-        self.pwm_ENA.ChangeDutyCycle(80)
-        self.pwm_ENB.ChangeDutyCycle(80)
+        self.pwm_ENA.ChangeDutyCycle(lspeed)
+        self.pwm_ENB.ChangeDutyCycle(rspeed)
         time.sleep(delaytime)
+        if(brake):
+            self.brake()
 
     #小车原地左转
-    def spin_left(self,delaytime=1):
+    def spin_left(self,delaytime=1,lspeed=80,rspeed=80,brake=True):
         GPIO.output(IN1, GPIO.LOW)
         GPIO.output(IN2, GPIO.HIGH)
         GPIO.output(IN3, GPIO.HIGH)
         GPIO.output(IN4, GPIO.LOW)
-        self.pwm_ENA.ChangeDutyCycle(80)
-        self.pwm_ENB.ChangeDutyCycle(80)
+        self.pwm_ENA.ChangeDutyCycle(lspeed)
+        self.pwm_ENB.ChangeDutyCycle(rspeed)
         time.sleep(delaytime)
+        if(brake):
+            self.brake()
 
     #小车原地右转
-    def spin_right(self,delaytime=1):
+    def spin_right(self,delaytime=1,lspeed=80,rspeed=80,brake=True):
         GPIO.output(IN1, GPIO.HIGH)
         GPIO.output(IN2, GPIO.LOW)
         GPIO.output(IN3, GPIO.LOW)
         GPIO.output(IN4, GPIO.HIGH)
-        self.pwm_ENA.ChangeDutyCycle(80)
-        self.pwm_ENB.ChangeDutyCycle(80)
+        self.pwm_ENA.ChangeDutyCycle(lspeed)
+        self.pwm_ENB.ChangeDutyCycle(rspeed)
         time.sleep(delaytime)
+        if(brake):
+            self.brake()
 
     #小车停止   
-    def brake(self,delaytime=1):
+    def brake(self,delaytime=0.1):
         GPIO.output(IN1, GPIO.LOW)
         GPIO.output(IN2, GPIO.LOW)
         GPIO.output(IN3, GPIO.LOW)
@@ -276,7 +297,7 @@ class Wangcai:
         time.sleep(0.001)
 
     #超声波测距函数
-    def distance(self):
+    def distance(self,isprint=False):
         GPIO.output(TrigPin,GPIO.HIGH)
         time.sleep(0.000015)
         GPIO.output(TrigPin,GPIO.LOW)
@@ -286,7 +307,8 @@ class Wangcai:
         while GPIO.input(EchoPin):
             pass
             t2 = time.time()
-        #print "distance is %d " % (((t2 - t1)* 340 / 2) * 100)
+        if(isprint):
+            print "distance is %d " % (((t2 - t1)* 340 / 2) * 100)
         time.sleep(0.01)
         return ((t2 - t1)* 340 / 2) * 100
 
@@ -327,6 +349,60 @@ class Wangcai:
         LDR_value_list[1] = str(LdrSersorRightValue)    
         return ''.join(LDR_value_list)
 
+    #超声波避障
+    def ultrasonic_random_walk(self, timeout=60):
+        self.walkEnable = True
+        ticks = time.time()
+
+        while self.walkEnable:
+            # check timeout 
+            duration = time.time() - ticks
+            print "duration=%s timeout=%s" % (duration, timeout)
+            if duration > timeout :
+                self.walkEnable = False
+                break
+
+            # get distance
+            distance = self.distance(True)
+            if distance > 50:
+                #当距离障碍物较远时全速前进
+                print("  advance full speed")
+                self.advance(0, 100, 100, False)
+            elif 30 <= distance <= 50:
+                #当快靠近障碍物时慢速前进
+                print("  advance half speed")
+                self.advance(0, 50, 50, False)
+            elif distance < 30:
+                #当靠近障碍物时原地右转大约90度
+                print("  turn right")
+                self.spin_right(0.35, 85, 85, True)
+                time.sleep(0.001)
+
+                #再次测试判断前方距离
+                distance = self.distance()  
+                if distance >= 30:
+                    #转弯后当前方距离大于25cm时前进
+                    print("  advance half speed")
+                    self.advance(0, 50, 50, False)
+                elif distance < 30:
+                    #转弯后前方距离小于25cm时向左原地转弯180度
+                    print("  U turn")
+                    self.spin_left(0.6, 85, 85, True)
+                    time.sleep(0.001)
+
+                #再次测试判断前方距离
+                distance = self.distance()
+                if distance >= 30:
+                    #转弯后当前方距离大于25cm时前进
+                    print("  advance half speed")
+                    self.advance(0, 50, 50, False)        
+                elif distance < 30:
+                    #转弯后前方距离小于25cm时向左原地转弯90度
+                    print("  turn left")
+                    self.spin_left(0.3, 85, 85, True)
+                    time.sleep(0.001)
+
+            time.sleep(0.1)
 # main function
 if __name__ == "__main__":
 
@@ -438,6 +514,8 @@ if __name__ == "__main__":
     else :
         wc.color_led_pwm(255,0,0)
         time.sleep(1)
+        wc.ultrasonic_random_walk(10)
+
 
 
 
